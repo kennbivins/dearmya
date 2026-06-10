@@ -91,6 +91,7 @@ const toast       = document.getElementById('toast');
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function setDate() {
+  if (!datestamp) return;
   datestamp.textContent = new Date()
     .toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})
     .toUpperCase();
