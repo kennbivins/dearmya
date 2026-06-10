@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Quote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,500&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #C9A96E;
+    --white: #FFFFFF;
+    --white-dim: rgba(255,255,255,0.55);
+    --transition-slow: 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 0.3s ease;
+  }
+  html, body { width:100%; height:100%; overflow:hidden; font-family:'Inter',sans-serif; background:#0d0d0d; color:var(--white); }
+
+  /* BG */
+  #bg { position:fixed; inset:0; z-index:0; }
+  .bg-layer { position:absolute; inset:0; background-size:cover; background-position:center; transition:opacity var(--transition-slow); }
+  .bg-layer.active  { opacity:1; }
+  .bg-layer.inactive{ opacity:0; }
+  #bg::after { content:''; position:absolute; inset:0; background:linear-gradient(to bottom, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.28) 40%, rgba(0,0,0,0.62) 74%, rgba(0,0,0,0.88) 100%); z-index:1; pointer-events:none; }
+
+  /* CHROME */
+  #logo { position:fixed; top:2rem; left:2.5rem; z-index:10; font-family:'Cormorant Garamond',serif; font-size:1rem; font-weight:300; letter-spacing:0.28em; text-transform:uppercase; color:var(--white-dim); opacity:0; animation:fadeIn 1s 0.2s forwards; }
+  #datestamp { position:fixed; top:2.2rem; left:50%; transform:translateX(-50%); z-index:10; font-size:0.65rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--gold); opacity:0; animation:fadeUp 1s 0.3s forwards; }
+  #counter { position:fixed; top:2.1rem; right:2.5rem; z-index:10; font-size:0.6rem; letter-spacing:0.14em; color:var(--white-dim); opacity:0; animation:fadeIn 1s 0.8s forwards; }
+
+  /* REFRESH */
+  #refresh-btn { position:fixed; top:1.7rem; left:50%; z-index:10; transform:translateX(calc(-50% + 120px)); background:none; border:none; cursor:pointer; padding:4px; opacity:0; animation:fadeIn 1s 1s forwards; color:var(--white-dim); transition:color var(--transition-fast); display:flex; align-items:center; gap:5px; }
+  #refresh-btn:hover { color:var(--gold); }
+  #refresh-btn svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:2; }
+  #refresh-btn span { font-size:0.55rem; letter-spacing:0.15em; text-transform:uppercase; }
+  #refresh-btn.spinning svg { animation:spin 0.8s linear infinite; }
+
+  /* QUOTE */
+  #stage { position:fixed; inset:0; z-index:2; display:flex; align-items:center; justify-content:center; padding:0 clamp(1.5rem,8vw,8rem); padding-bottom:160px; }
+  #quote-block { text-align:center; max-width:820px; width:100%; }
+  #quote-text { font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:300; font-size:clamp(1.7rem,3.8vw,3.2rem); line-height:1.5; color:var(--white); letter-spacing:0.01em; margin-bottom:2rem; }
+  #quote-text .word { display:inline; opacity:0; filter:blur(4px); transition:opacity 0.55s ease, filter 0.55s ease; }
+  #quote-text .word.visible { opacity:1; filter:blur(0); }
+  .q-mark { font-family:'Cormorant Garamond',serif; font-style:italic; font-size:clamp(3rem,6vw,5.5rem); line-height:0; vertical-align:-0.4em; color:var(--gold); margin-right:0.06em; display:inline-block; }
+  .q-mark-close { color:rgba(201,169,110,0.45); font-size:1em; vertical-align:-0.1em; }
+  #attribution { font-size:0.68rem; font-weight:300; letter-spacing:0.18em; text-transform:uppercase; color:var(--gold); opacity:0; transition:opacity 0.8s ease; }
+  #attribution.visible { opacity:1; }
+  #attr-line { display:inline-block; width:28px; height:1px; background:var(--gold); vertical-align:middle; margin-right:0.9em; opacity:0.7; }
+
+  /* FILMSTRIP */
+  #filmstrip-wrap { position:fixed; bottom:0; left:0; right:0; z-index:10; padding:0 2rem 2rem; display:flex; align-items:flex-end; }
+  #filmstrip { display:flex; gap:10px; align-items:flex-end; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  #filmstrip::-webkit-scrollbar { display:none; }
+  .thumb { position:relative; flex-shrink:0; width:72px; height:48px; border-radius:3px; overflow:hidden; cursor:pointer; opacity:0; border:1px solid transparent; transition:transform var(--transition-fast), opacity var(--transition-fast), border-color var(--transition-fast); animation:thumbIn 0.5s ease forwards; animation-play-state:paused; }
+  @keyframes thumbIn { from{opacity:0;transform:translateY(8px);} to{opacity:0.52;transform:translateY(0);} }
+  .thumb:hover { opacity:0.82 !important; transform:translateY(-3px) scale(1.04); }
+  .thumb.active-thumb { opacity:1 !important; border-color:var(--gold); transform:translateY(-4px) scale(1.06); }
+  .thumb img { width:100%; height:100%; object-fit:cover; filter:brightness(0.7); transition:filter var(--transition-fast); }
+  .thumb:hover img { filter:brightness(0.88); }
+  .thumb-num { position:absolute; bottom:3px; right:4px; font-size:0.5rem; letter-spacing:0.1em; color:rgba(255,255,255,0.72); }
+
+  /* NAV */
+  #nav-next { position:fixed; top:50%; right:2.5rem; transform:translateY(-50%); z-index:10; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:0.5rem; opacity:0; animation:fadeIn 1s 1s forwards; }
+  #nav-next svg { width:22px; height:22px; stroke:var(--gold); fill:none; stroke-width:1.2; transition:transform var(--transition-fast), stroke var(--transition-fast); }
+  #nav-next:hover svg { transform:translateX(4px); stroke:var(--white); }
+  #nav-next span { font-size:0.55rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--white-dim); writing-mode:vertical-rl; transform:rotate(180deg); }
+
+  /* CURTAIN */
+  #curtain { position:fixed; inset:0; background:#0a0a0a; z-index:50; opacity:0; pointer-events:none; transition:opacity 0.5s ease; }
+  #curtain.closing { opacity:1; pointer-events:all; }
+
+  /* TOAST */
+  #toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:100; background:rgba(201,169,110,0.15); border:1px solid rgba(201,169,110,0.35); color:var(--gold); padding:0.5rem 1.2rem; font-size:0.65rem; letter-spacing:0.14em; text-transform:uppercase; border-radius:2px; opacity:0; transition:opacity 0.4s ease; pointer-events:none; white-space:nowrap; }
+  #toast.show { opacity:1; }
+
+  /* LOADING */
+  #loading { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.2rem; background:#0d0d0d; transition:opacity 0.6s ease; }
+  #loading.hidden { opacity:0; pointer-events:none; }
+  .spinner { width:32px; height:32px; border:1px solid rgba(201,169,110,0.25); border-top-color:var(--gold); border-radius:50%; animation:spin 0.9s linear infinite; }
+  #loading p { font-size:0.65rem; letter-spacing:0.22em; text-transform:uppercase; color:var(--white-dim); }
+
+  @keyframes fadeUp  { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes fadeIn  { from{opacity:0;} to{opacity:1;} }
+  @keyframes spin    { to{transform:rotate(360deg);} }
+
+  @media (max-width:640px) {
+    #stage { padding:0 1.5rem; padding-bottom:140px; }
+    #nav-next, #refresh-btn span { display:none; }
+    #quote-text { font-size:clamp(1.4rem,5.5vw,2rem); }
+    .thumb { width:56px; height:38px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .word, .bg-layer, #curtain { transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>Loading quotes</p></div>
+<div id="curtain"></div>
+<div id="bg">
+  <div class="bg-layer active"   id="bg-a"></div>
+  <div class="bg-layer inactive" id="bg-b"></div>
+</div>
+
+<div id="logo">One&nbsp;Quote</div>
+<div id="datestamp"></div>
+<div id="counter"></div>
+
+<button id="refresh-btn" title="Reload from Google Sheet">
+  <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.36-3.36L23 10M1 14l5.13 4.36A9 9 0 0020.49 15"/></svg>
+  <span>Sync sheet</span>
+</button>
+
+<div id="stage">
+  <div id="quote-block">
+    <div id="quote-text"></div>
+    <div id="attribution"><span id="attr-line"></span><span id="attr-name"></span></div>
+  </div>
+</div>
+
+<div id="filmstrip-wrap"><div id="filmstrip"></div></div>
+
+<div id="nav-next" title="Next quote">
+  <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  <span>Next</span>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────
+// Your Google Sheet ID — must be shared as "Anyone with link — Viewer"
+const SHEET_ID = '14XtDpohTkvqs1vDmOWyKA1MQZBWj7C8u2IeWf1jURJA';
+
+// ─── IMAGE URL NORMALIZER ──────────────────────────────────────
+// Converts any Drive share URL to a thumbnail URL that browsers
+// can load directly without CORS issues.
+// Also catches Google Photos links and warns the user.
+function normalizeImageUrl(url) {
+  if (!url) return url;
+
+  if (url.includes('photos.app.goo.gl') || url.includes('photos.google.com')) {
+    return '__GOOGLE_PHOTOS__';
+  }
+
+  if (!url.includes('drive.google.com')) return url;
+
+  let fileId = null;
+  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) fileId = fileMatch[1];
+  if (!fileId) {
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch) fileId = idMatch[1];
+  }
+  if (!fileId) return url;
+
+  // thumbnail endpoint: public, CORS-safe, supports sz param for resolution
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600-h900`;
+}
+
+// ─── CSV → QUOTES ──────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return null;
+
+  function parseLine(line) {
+    const result = []; let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+      else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g,'_'));
+  const qi = headers.indexOf('quote'), ai = headers.indexOf('author'), ii = headers.indexOf('image_url');
+  if (qi < 0 || ai < 0 || ii < 0) return null;
+
+  return lines.slice(1)
+    .map(l => parseLine(l))
+    .filter(r => r[qi] && r[ai] && r[ii])
+    .map(r => ({ text: r[qi], author: r[ai], imageUrl: normalizeImageUrl(r[ii]) }));
+}
+
+// ─── FETCH SHEET ───────────────────────────────────────────────
+// Uses the public CSV export URL — works from any server when the
+// sheet is shared as "Anyone with link — Viewer". No API key needed.
+async function loadSheet() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
+  const text = await res.text();
+  const quotes = parseCSV(text);
+  if (!quotes || !quotes.length) throw new Error('No quotes found — check column headers: quote, author, image_url');
+  return quotes;
+}
+
+// ─── STATE ────────────────────────────────────────────────────
+let QUOTES = [];
+let currentIndex = 0;
+const imageCache = {};
+
+// ─── DOM ─────────────────────────────────────────────────────
+const bgA         = document.getElementById('bg-a');
+const bgB         = document.getElementById('bg-b');
+const curtain     = document.getElementById('curtain');
+const quoteText   = document.getElementById('quote-text');
+const attrName    = document.getElementById('attr-name');
+const attribution = document.getElementById('attribution');
+const filmstrip   = document.getElementById('filmstrip');
+const counter     = document.getElementById('counter');
+const datestamp   = document.getElementById('datestamp');
+const loading     = document.getElementById('loading');
+const refreshBtn  = document.getElementById('refresh-btn');
+const toast       = document.getElementById('toast');
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setDate() {
+  datestamp.textContent = new Date()
+    .toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})
+    .toUpperCase();
+}
+
+function showToast(msg, ms = 3000) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), ms);
+}
+
+// ─── PRELOAD ──────────────────────────────────────────────────
+function preloadImage(url) {
+  if (url === '__GOOGLE_PHOTOS__') return Promise.resolve('__GOOGLE_PHOTOS__');
+  return new Promise(resolve => {
+    if (imageCache[url]) { resolve(url); return; }
+    const img = new Image();
+    img.onload  = () => { imageCache[url] = true; resolve(url); };
+    img.onerror = () => resolve(url);
+    img.src = url;
+  });
+}
+
+// ─── WORD REVEAL ──────────────────────────────────────────────
+function revealWords(text) {
+  quoteText.innerHTML = '';
+  attribution.classList.remove('visible');
+
+  const open = document.createElement('span');
+  open.className = 'q-mark';
+  open.style.cssText = 'opacity:0;transition:opacity 0.5s ease';
+  open.textContent = '\u201C';
+  quoteText.appendChild(open);
+  requestAnimationFrame(() => { open.style.opacity = '1'; });
+
+  const words = text.split(' ');
+  const BASE = 200, STAGGER = 58;
+  words.forEach((word, i) => {
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.textContent = (i === 0 ? '' : ' ') + word;
+    quoteText.appendChild(span);
+    setTimeout(() => span.classList.add('visible'), BASE + i * STAGGER);
+  });
+
+  const close = document.createElement('span');
+  close.className = 'word q-mark-close';
+  close.textContent = '\u201D';
+  quoteText.appendChild(close);
+  setTimeout(() => close.classList.add('visible'), BASE + words.length * STAGGER);
+  setTimeout(() => attribution.classList.add('visible'), BASE + (words.length + 1) * STAGGER + 300);
+}
+
+// ─── FILMSTRIP ────────────────────────────────────────────────
+function buildThumb(q, idx) {
+  const div = document.createElement('div');
+  div.className = 'thumb';
+  div.dataset.idx = idx;
+  div.title = `"${q.text.substring(0,45)}…" — ${q.author}`;
+  const img = document.createElement('img');
+  img.src = q.imageUrl === '__GOOGLE_PHOTOS__' ? '' : q.imageUrl;
+  img.alt = q.author; img.loading = 'lazy';
+  const num = document.createElement('div');
+  num.className = 'thumb-num';
+  num.textContent = String(idx+1).padStart(2,'0');
+  div.appendChild(img); div.appendChild(num);
+  div.addEventListener('click', () => { if (idx !== currentIndex) switchTo(idx); });
+  setTimeout(() => { div.style.animationPlayState = 'running'; }, idx * 80 + 400);
+  return div;
+}
+
+function rebuildFilmstrip() {
+  filmstrip.innerHTML = '';
+  QUOTES.forEach((q,i) => filmstrip.appendChild(buildThumb(q,i)));
+  updateThumbs();
+}
+
+function updateThumbs() {
+  document.querySelectorAll('.thumb').forEach(t => {
+    t.classList.toggle('active-thumb', parseInt(t.dataset.idx) === currentIndex);
+  });
+}
+
+// ─── SWITCH ───────────────────────────────────────────────────
+async function switchTo(idx, skipCurtain = false) {
+  if (!skipCurtain) { curtain.classList.add('closing'); await sleep(500); }
+  currentIndex = idx;
+  const q = QUOTES[idx];
+
+  const resolvedUrl = await preloadImage(q.imageUrl);
+
+  if (resolvedUrl === '__GOOGLE_PHOTOS__') {
+    if (!skipCurtain) curtain.classList.remove('closing');
+    revealWords(q.text);
+    attrName.textContent = q.author;
+    counter.textContent = `${String(idx+1).padStart(2,'0')} / ${String(QUOTES.length).padStart(2,'0')}`;
+    updateThumbs();
+    showToast('Google Photos links don\'t work — use Google Drive instead');
+    return;
+  }
+
+  bgA.style.transition = 'none';
+  bgA.style.backgroundImage = `url(${resolvedUrl})`;
+  bgA.classList.add('active');   bgA.classList.remove('inactive');
+  bgB.classList.add('inactive'); bgB.classList.remove('active');
+
+  revealWords(q.text);
+  attrName.textContent = q.author;
+  counter.textContent = `${String(idx+1).padStart(2,'00')} / ${String(QUOTES.length).padStart(2,'0')}`;
+  updateThumbs();
+
+  await new Promise(r => requestAnimationFrame(r));
+  await new Promise(r => requestAnimationFrame(r));
+
+  if (!skipCurtain) curtain.classList.remove('closing');
+  setTimeout(() => { bgA.style.transition = ''; }, 550);
+
+  [idx-1, idx+1].forEach(n => { if (QUOTES[n]) preloadImage(QUOTES[n].imageUrl); });
+}
+
+function goNext() {
+  const next = (currentIndex + 1) % QUOTES.length;
+  switchTo(next);
+  const thumbs = filmstrip.querySelectorAll('.thumb');
+  if (thumbs[next]) thumbs[next].scrollIntoView({behavior:'smooth',inline:'center'});
+}
+
+// ─── KEYBOARD / SWIPE ─────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNext();
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')
+    switchTo((currentIndex - 1 + QUOTES.length) % QUOTES.length);
+});
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) dx < 0 ? goNext() : switchTo((currentIndex-1+QUOTES.length) % QUOTES.length);
+}, {passive:true});
+document.getElementById('nav-next').addEventListener('click', goNext);
+
+// ─── SYNC BUTTON ──────────────────────────────────────────────
+// On a real server this works perfectly — fetches live from the sheet.
+// In the Claude preview sandbox, cross-origin fetches are blocked,
+// so it will show a toast explaining that.
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.classList.add('spinning');
+  refreshBtn.disabled = true;
+  try {
+    const fresh = await loadSheet();
+    QUOTES = fresh;
+    currentIndex = 0;
+    rebuildFilmstrip();
+    await switchTo(0, true);
+    showToast(`↑ ${QUOTES.length} quotes synced from sheet`);
+  } catch (err) {
+    console.error('Sync failed:', err);
+    showToast('Sync works on your server — preview blocks external fetches');
+  } finally {
+    refreshBtn.classList.remove('spinning');
+    refreshBtn.disabled = false;
+  }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────
+async function init() {
+  setDate();
+  try {
+    QUOTES = await loadSheet();
+  } catch (err) {
+    console.warn('Sheet load failed, no fallback:', err);
+    loading.classList.add('hidden');
+    showToast('Could not load sheet — check sharing settings', 5000);
+    return;
+  }
+  rebuildFilmstrip();
+  const firstUrl = await preloadImage(QUOTES[0].imageUrl);
+  if (firstUrl !== '__GOOGLE_PHOTOS__') {
+    bgA.style.backgroundImage = `url(${firstUrl})`;
+  }
+  revealWords(QUOTES[0].text);
+  attrName.textContent = QUOTES[0].author;
+  counter.textContent = `01 / ${String(QUOTES.length).padStart(2,'0')}`;
+  updateThumbs();
+  loading.classList.add('hidden');
+  QUOTES.slice(1, 3).forEach(q => preloadImage(q.imageUrl));
+}
+
+init();
+</script>
+</body>
+</html>
