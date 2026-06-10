@@ -192,7 +192,8 @@ function parseCSV(text) {
 // Uses the public CSV export URL — works from any server when the
 // sheet is shared as "Anyone with link — Viewer". No API key needed.
 async function loadSheet() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+  // Published CSV URL from File → Share → Publish to web → CSV
+  const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTO58wXAddfNfOo3yh5ZPlmUd8KOLcQNnlK7J3Yjfoz1tT3tliqt5JqQj_G4O6glzUE-GX_6U0Mzwc8/pub?gid=847987611&single=true&output=csv';
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
   const text = await res.text();
