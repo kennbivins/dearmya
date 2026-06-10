@@ -82,7 +82,7 @@ const quoteText   = document.getElementById('quote-text');
 const attrName    = document.getElementById('attr-name');
 const attribution = document.getElementById('attribution');
 const filmstrip   = document.getElementById('filmstrip');
-const counter     = document.getElementById('counter');
+// const counter     = document.getElementById('counter');
 const datestamp   = document.getElementById('datestamp');
 const loading     = document.getElementById('loading');
 // const refreshBtn  = document.getElementById('refresh-btn');
@@ -187,7 +187,7 @@ async function switchTo(idx, skipCurtain = false) {
     if (!skipCurtain) curtain.classList.remove('closing');
     revealWords(q.text);
     attrName.textContent = q.author;
-    counter.textContent = `${String(idx+1).padStart(2,'0')} / ${String(QUOTES.length).padStart(2,'0')}`;
+    // counter.textContent = `${String(idx+1).padStart(2,'0')} / ${String(QUOTES.length).padStart(2,'0')}`;
     updateThumbs();
     showToast('Google Photos links don\'t work — use Google Drive instead');
     return;
@@ -200,7 +200,7 @@ async function switchTo(idx, skipCurtain = false) {
 
   revealWords(q.text);
   attrName.textContent = q.author;
-  counter.textContent = `${String(idx+1).padStart(2,'00')} / ${String(QUOTES.length).padStart(2,'0')}`;
+  // counter.textContent = `${String(idx+1).padStart(2,'00')} / ${String(QUOTES.length).padStart(2,'0')}`;
   updateThumbs();
 
   await new Promise(r => requestAnimationFrame(r));
@@ -274,7 +274,7 @@ async function init() {
   }
   revealWords(QUOTES[0].text);
   attrName.textContent = QUOTES[0].author;
-  counter.textContent = `01 / ${String(QUOTES.length).padStart(2,'0')}`;
+  // counter.textContent = `01 / ${String(QUOTES.length).padStart(2,'0')}`;
   updateThumbs();
   loading.classList.add('hidden');
   QUOTES.slice(1, 3).forEach(q => preloadImage(q.imageUrl));
